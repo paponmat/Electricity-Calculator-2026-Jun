@@ -297,6 +297,36 @@
     .btn:hover { opacity: 0.88; transform: translateY(-1px); }
     .btn:active { transform: translateY(0); }
 
+    /* ── INLINE EDITABLE RATE ── */
+    .inline-input-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+    }
+    .inline-input {
+      width: 72px;
+      background: var(--surface);
+      border: 1px solid rgba(52,211,153,0.4);
+      border-radius: 6px;
+      color: var(--new);
+      font-family: 'Sarabun', sans-serif;
+      font-size: 0.83rem;
+      font-weight: 700;
+      padding: 0.2rem 0.4rem;
+      outline: none;
+      text-align: right;
+      transition: border-color 0.2s;
+    }
+    .inline-input:focus { border-color: var(--new); box-shadow: 0 0 0 2px rgba(52,211,153,0.15); }
+    .inline-input.old-inline {
+      border-color: rgba(245,158,11,0.4);
+      color: var(--old);
+    }
+    .inline-input.old-inline:focus { border-color: var(--old); box-shadow: 0 0 0 2px rgba(245,158,11,0.15); }
+    .inline-unit { font-size: 0.83rem; color: var(--new); font-weight: 700; }
+    .inline-unit.old-unit { color: var(--old); }
+    .new-price-fixed { color: var(--new); }
+
     /* scrollbar */
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: var(--bg); }
@@ -350,30 +380,60 @@
         <div class="rb-label">อัตราปัจจุบัน</div>
         <div class="rate-row">
           <span class="tier">0 – 150 หน่วย</span>
-          <span class="price">3.2484 ฿</span>
+          <span class="price">
+            <div class="inline-input-wrap">
+              <input type="number" id="old-rate-t1" value="3.2484" step="0.0001" min="0" class="inline-input old-inline" />
+              <span class="inline-unit old-unit">฿</span>
+            </div>
+          </span>
         </div>
         <div class="rate-row">
           <span class="tier">151 – 400 หน่วย</span>
-          <span class="price">4.2218 ฿</span>
+          <span class="price">
+            <div class="inline-input-wrap">
+              <input type="number" id="old-rate-t2" value="4.2218" step="0.0001" min="0" class="inline-input old-inline" />
+              <span class="inline-unit old-unit">฿</span>
+            </div>
+          </span>
         </div>
         <div class="rate-row">
           <span class="tier">401+ หน่วย</span>
-          <span class="price">4.4217 ฿</span>
+          <span class="price">
+            <div class="inline-input-wrap">
+              <input type="number" id="old-rate-t3" value="4.4217" step="0.0001" min="0" class="inline-input old-inline" />
+              <span class="inline-unit old-unit">฿</span>
+            </div>
+          </span>
         </div>
       </div>
       <div class="rate-block new-block">
         <div class="rb-label">โครงสร้างใหม่ (มิ.ย.69)</div>
         <div class="rate-row">
           <span class="tier">0 – 200 หน่วย</span>
-          <span class="price">≤ 3.00 ฿</span>
+          <span class="price">
+            <div class="inline-input-wrap">
+              <input type="number" id="new-rate-t1" value="3.00" step="0.0001" min="0" class="inline-input new-inline" />
+              <span class="inline-unit">฿</span>
+            </div>
+          </span>
         </div>
         <div class="rate-row">
           <span class="tier">201 – 400 หน่วย</span>
-          <span class="price">3.95 ฿</span>
+          <span class="price">
+            <div class="inline-input-wrap">
+              <input type="number" id="new-rate-t2" value="3.95" step="0.0001" min="0" class="inline-input new-inline" />
+              <span class="inline-unit">฿</span>
+            </div>
+          </span>
         </div>
         <div class="rate-row">
           <span class="tier">401+ หน่วย</span>
-          <span class="price">&gt; 5.00 ฿</span>
+          <span class="price">
+            <div class="inline-input-wrap">
+              <input type="number" id="new-rate-t3" value="5.00" step="0.0001" min="0" class="inline-input new-inline" />
+              <span class="inline-unit">฿</span>
+            </div>
+          </span>
         </div>
       </div>
     </div>
@@ -448,10 +508,15 @@
    * @returns {{ total: number, breakdown: {label:string, units:number, rate:number, cost:number}[] }}
    */
   function calcOld(units) {
+    // อ่านอัตราที่ผู้ใช้กำหนดได้
+    const rateT1 = parseFloat(document.getElementById('old-rate-t1').value) || 3.2484;
+    const rateT2 = parseFloat(document.getElementById('old-rate-t2').value) || 4.2218;
+    const rateT3 = parseFloat(document.getElementById('old-rate-t3').value) || 4.4217;
+
     const tiers = [
-      { label: "0–150 หน่วย",   limit: 150,        rate: 3.2484 },
-      { label: "151–400 หน่วย", limit: 250,        rate: 4.2218 },  // 400-150 = 250 หน่วยในช่วงนี้
-      { label: "401+ หน่วย",    limit: Infinity,   rate: 4.4217 },
+      { label: "0–150 หน่วย",   limit: 150,       rate: rateT1 },
+      { label: "151–400 หน่วย", limit: 250,       rate: rateT2 },
+      { label: "401+ หน่วย",    limit: Infinity,  rate: rateT3 },
     ];
 
     let remaining = units;
@@ -480,10 +545,15 @@
    *           สคริปต์นี้ใช้ 5.00 บาทเป็นค่าตัวอย่างขั้นต่ำ
    */
   function calcNew(units) {
+    // อ่านอัตราที่ผู้ใช้กำหนดได้ (ทุก Tier)
+    const rateT1 = parseFloat(document.getElementById('new-rate-t1').value) || 3.00;
+    const rateT2 = parseFloat(document.getElementById('new-rate-t2').value) || 3.95;
+    const rateT3 = parseFloat(document.getElementById('new-rate-t3').value) || 5.00;
+
     const tiers = [
-      { label: "0–200 หน่วย",   limit: 200,       rate: 3.00 },
-      { label: "201–400 หน่วย", limit: 200,       rate: 3.95 },
-      { label: "401+ หน่วย",    limit: Infinity,  rate: 5.00 },
+      { label: "0–200 หน่วย",   limit: 200,       rate: rateT1 },
+      { label: "201–400 หน่วย", limit: 200,       rate: rateT2 },
+      { label: "401+ หน่วย",    limit: Infinity,  rate: rateT3 },
     ];
 
     let remaining = units;
