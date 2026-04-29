@@ -99,10 +99,10 @@
     /* ── INPUT ROW ── */
     .input-row {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr 1fr 1fr;
       gap: 1rem;
     }
-    @media (max-width: 500px) { .input-row { grid-template-columns: 1fr; } }
+    @media (max-width: 600px) { .input-row { grid-template-columns: 1fr; } }
 
     .field label {
       display: block;
@@ -331,6 +331,13 @@
           <span class="unit">บาท/หน่วย</span>
         </div>
       </div>
+      <div class="field">
+        <label><strong>VAT</strong> (ภาษีมูลค่าเพิ่ม)</label>
+        <div class="input-wrap">
+          <input type="number" id="vat" placeholder="เช่น 7" step="0.01" value="7" min="0" />
+          <span class="unit">%</span>
+        </div>
+      </div>
     </div>
     <button class="btn" onclick="calculate()">⚡ คำนวณและเปรียบเทียบ</button>
   </div>
@@ -380,7 +387,7 @@
       <div class="result-card old-card">
         <div class="rc-label">อัตราปัจจุบัน</div>
         <div class="rc-total" id="old-total">—</div>
-        <div class="rc-unit">บาท / เดือน</div>
+        <div class="rc-unit">บาท / เดือน <span id="old-vat-note" style="color:var(--muted)"></span></div>
         <div class="breakdown" id="old-breakdown"></div>
       </div>
 
@@ -388,10 +395,27 @@
       <div class="result-card new-card">
         <div class="rc-label">โครงสร้างใหม่ มิ.ย.69</div>
         <div class="rc-total" id="new-total">—</div>
-        <div class="rc-unit">บาท / เดือน</div>
+        <div class="rc-unit">บาท / เดือน <span id="new-vat-note" style="color:var(--muted)"></span></div>
         <div class="breakdown" id="new-breakdown"></div>
       </div>
 
+    </div>
+
+    <!-- VAT Summary -->
+    <div class="card" id="vat-summary" style="margin-bottom:1.25rem;">
+      <div class="card-title">🧾 ยอดรวมหลังหักภาษีมูลค่าเพิ่ม (VAT)</div>
+      <div class="result-grid" style="margin-bottom:0;">
+        <div class="result-card old-card">
+          <div class="rc-label">อัตราปัจจุบัน + VAT</div>
+          <div class="rc-total" id="old-vat-total">—</div>
+          <div class="rc-unit">บาท / เดือน</div>
+        </div>
+        <div class="result-card new-card">
+          <div class="rc-label">โครงสร้างใหม่ + VAT</div>
+          <div class="rc-total" id="new-vat-total">—</div>
+          <div class="rc-unit">บาท / เดือน</div>
+        </div>
+      </div>
     </div>
 
     <!-- Diff -->
@@ -514,6 +538,9 @@
     // อ่านค่าจาก input
     const units = parseFloat(document.getElementById('units').value) || 0;
     const ft    = parseFloat(document.getElementById('ft').value)    || 0;
+    const vat   = parseFloat(document.getElementById('vat').value);
+    // vatRate = ตัวคูณ เช่น 7% → 1.07
+    const vatRate = 1 + (isNaN(vat) ? 0 : vat / 100);
 
     if (units < 0) {
       alert('กรุณาระบุจำนวนหน่วยที่ถูกต้อง (ไม่ติดลบ)');
@@ -524,50 +551,60 @@
     const oldResult = calcOld(units);
     const newResult = calcNew(units);
 
-    // รวมค่า Ft
-    const ftTotal   = units * ft;
-    const oldFinal  = oldResult.total + ftTotal;
-    const newFinal  = newResult.total + ftTotal;
+    // รวมค่า Ft (ก่อน VAT)
+    const ftTotal  = units * ft;
+    const oldFinal = oldResult.total + ftTotal;  // ก่อน VAT
+    const newFinal = newResult.total + ftTotal;  // ก่อน VAT
 
-    // แสดงยอดรวม
+    // หลัง VAT
+    const oldWithVat = oldFinal * vatRate;
+    const newWithVat = newFinal * vatRate;
+
+    // แสดงยอดรวม (ก่อน VAT)
     document.getElementById('old-total').textContent = oldFinal.toFixed(2);
     document.getElementById('new-total').textContent = newFinal.toFixed(2);
 
-    // แสดง breakdown
+    // label บอก VAT
+    const vatLabel = vat > 0 ? `(ก่อน VAT ${vat}%)` : '';
+    document.getElementById('old-vat-note').textContent = vatLabel;
+    document.getElementById('new-vat-note').textContent = vatLabel;
+
+    // แสดงยอดรวมหลัง VAT
+    document.getElementById('old-vat-total').textContent = oldWithVat.toFixed(2);
+    document.getElementById('new-vat-total').textContent = newWithVat.toFixed(2);
+
+    // แสดง breakdown (ก่อน VAT)
     renderBreakdown('old-breakdown', oldResult.breakdown, ft, units);
     renderBreakdown('new-breakdown', newResult.breakdown, ft, units);
 
-    // คำนวณส่วนต่าง
-    const diff = newFinal - oldFinal;  // บวก = โครงสร้างใหม่แพงกว่า, ลบ = ถูกกว่า
-    const diffEl   = document.getElementById('diff-amount');
-    const noteEl   = document.getElementById('diff-note');
-    const barEl    = document.getElementById('diff-bar');
+    // คำนวณส่วนต่าง → เปรียบจากยอดหลัง VAT
+    const diff = newWithVat - oldWithVat;  // บวก = โครงสร้างใหม่แพงกว่า, ลบ = ถูกกว่า
+    const diffEl = document.getElementById('diff-amount');
+    const noteEl = document.getElementById('diff-note');
+    const barEl  = document.getElementById('diff-bar');
 
     diffEl.className = 'diff-amount';
 
     if (Math.abs(diff) < 0.01) {
-      // เท่ากัน
       diffEl.textContent = '0.00 บาท';
       diffEl.classList.add('same');
-      noteEl.innerHTML  = 'ค่าไฟฟ้า <strong>เท่ากัน</strong> ทั้งสองโครงสร้าง';
+      noteEl.innerHTML  = 'ค่าไฟฟ้า <strong>เท่ากัน</strong> ทั้งสองโครงสร้าง (รวม VAT)';
       barEl.className   = 'diff-bar same';
       barEl.style.width = '0%';
     } else if (diff < 0) {
-      // โครงสร้างใหม่ถูกกว่า
       const saving = Math.abs(diff);
       diffEl.textContent = `ประหยัด ${saving.toFixed(2)} บาท`;
       diffEl.classList.add('cheaper');
-      noteEl.innerHTML   = `โครงสร้างใหม่ <strong>ถูกกว่า</strong> ประหยัดได้ <strong>${saving.toFixed(2)} บาท/เดือน</strong>`;
+      noteEl.innerHTML   = `โครงสร้างใหม่ <strong>ถูกกว่า</strong> ประหยัดได้ <strong>${saving.toFixed(2)} บาท/เดือน</strong> (รวม VAT)`;
       barEl.className    = 'diff-bar cheaper';
-      const pct = Math.min((saving / oldFinal) * 100, 100);
+      const pct = Math.min((saving / oldWithVat) * 100, 100);
       barEl.style.width  = pct.toFixed(1) + '%';
     } else {
-      // โครงสร้างใหม่แพงกว่า
       diffEl.textContent = `แพงขึ้น ${diff.toFixed(2)} บาท`;
       diffEl.classList.add('pricier');
-      noteEl.innerHTML   = `โครงสร้างใหม่ <strong>แพงกว่า</strong> เพิ่มขึ้น <strong>${diff.toFixed(2)} บาท/เดือน</strong>`;
+      noteEl.innerHTML   = `โครงสร้างใหม่ <strong>แพงกว่า</strong> เพิ่มขึ้น <strong>${diff.toFixed(2)} บาท/เดือน</strong> (รวม VAT)`;
       barEl.className    = 'diff-bar pricier';
-      const pct = Math.min((diff / oldFinal) * 100, 100);
+      const pct = Math.min((diff / oldWithVat) * 100, 100);
       barEl.style.width  = pct.toFixed(1) + '%';
     }
 
