@@ -240,6 +240,10 @@
     }
     .be-stat .be-val { font-size: 1.5rem; font-weight: 800; color: var(--solar); }
     .be-stat .be-label { font-size: 0.75rem; color: var(--muted); margin-top: 0.25rem; }
+    .be-stat.old-card { background: var(--old-dim); border-color: rgba(245,158,11,0.3); }
+    .be-stat.new-card { background: var(--new-dim); border-color: rgba(52,211,153,0.3); }
+    .be-stat .be-val-old { font-size: 1.5rem; font-weight: 800; color: var(--old); }
+    .be-stat .be-val-new { font-size: 1.5rem; font-weight: 800; color: var(--new); }
 
     /* BUTTON */
     .btn {
@@ -520,20 +524,28 @@
             <div class="rc-total" id="solar-units-saved">—</div>
             <div class="rc-unit">หน่วย</div>
           </div>
-          <div class="result-card solar-card">
+        </div>
+
+        <div class="result-grid" style="margin-top:0;">
+          <div class="result-card old-card">
             <div class="rc-label">ค่าไฟที่เหลือจ่าย (อัตราปัจจุบัน)</div>
             <div class="rc-total" id="old-after-solar">—</div>
             <div class="rc-unit">บาท/เดือน (รวม VAT)</div>
           </div>
-        </div>
-
-        <div class="result-grid" style="margin-top:0;">
-          <div class="result-card solar-card">
+          <div class="result-card old-card">
             <div class="rc-label">ประหยัดต่อเดือน (อัตราปัจจุบัน)</div>
             <div class="rc-total" id="solar-saving-old">—</div>
             <div class="rc-unit">บาท/เดือน</div>
           </div>
-          <div class="result-card solar-card">
+        </div>
+
+        <div class="result-grid" style="margin-top:0;">
+          <div class="result-card new-card">
+            <div class="rc-label">ค่าไฟที่เหลือจ่าย (โครงสร้างใหม่)</div>
+            <div class="rc-total" id="new-after-solar">—</div>
+            <div class="rc-unit">บาท/เดือน (รวม VAT)</div>
+          </div>
+          <div class="result-card new-card">
             <div class="rc-label">ประหยัดต่อเดือน (โครงสร้างใหม่)</div>
             <div class="rc-total" id="solar-saving-new">—</div>
             <div class="rc-unit">บาท/เดือน</div>
@@ -545,20 +557,20 @@
           <hr style="border-color:var(--border); margin:1rem 0;" />
           <div class="card-title" style="color:var(--solar); margin-bottom:0.75rem;">📈 จุดคุ้มทุน</div>
           <div class="breakeven-grid">
-            <div class="be-stat">
-              <div class="be-val" id="be-months-old">—</div>
+            <div class="be-stat old-card">
+              <div class="be-val-old" id="be-months-old">—</div>
               <div class="be-label">เดือน (อัตราปัจจุบัน)</div>
             </div>
-            <div class="be-stat">
-              <div class="be-val" id="be-years-old">—</div>
+            <div class="be-stat old-card">
+              <div class="be-val-old" id="be-years-old">—</div>
               <div class="be-label">ปี (อัตราปัจจุบัน)</div>
             </div>
-            <div class="be-stat">
-              <div class="be-val" id="be-months-new">—</div>
+            <div class="be-stat new-card">
+              <div class="be-val-new" id="be-months-new">—</div>
               <div class="be-label">เดือน (โครงสร้างใหม่)</div>
             </div>
-            <div class="be-stat">
-              <div class="be-val" id="be-years-new">—</div>
+            <div class="be-stat new-card">
+              <div class="be-val-new" id="be-years-new">—</div>
               <div class="be-label">ปี (โครงสร้างใหม่)</div>
             </div>
             <div class="be-stat">
@@ -848,6 +860,7 @@
       document.getElementById('solar-units-saved').textContent = solarSaved.toFixed(2);
       document.getElementById('old-after-solar').textContent   = oldAfterVat.toFixed(2);
       document.getElementById('solar-saving-old').textContent  = savingOld.toFixed(2);
+      document.getElementById('new-after-solar').textContent   = newAfterVat.toFixed(2);
       document.getElementById('solar-saving-new').textContent  = savingNew.toFixed(2);
 
       // Breakeven
@@ -862,6 +875,7 @@
         const lifeSavingOld = savingOld * lifeMonths;
         const roi           = ((lifeSavingOld - investment) / investment) * 100;
 
+        //document.getElementById('money-invest').textContent   = investment.toFixed(0);
         document.getElementById('be-months-old').textContent  = beMonthsOld.toFixed(1);
         document.getElementById('be-years-old').textContent   = (beMonthsOld / 12).toFixed(1);
         document.getElementById('be-months-new').textContent  = isFinite(beMonthsNew) ? beMonthsNew.toFixed(1) : 'N/A';
