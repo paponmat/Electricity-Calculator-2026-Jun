@@ -21,6 +21,10 @@
       --text: #e2e8f0;
       --muted: #64748b;
       --accent: #6366f1;
+      --tou: #a78bfa;
+      --tou-dim: rgba(167,139,250,0.12);
+      --tou-after: #2dd4bf;
+      --tou-after-dim: rgba(45,212,191,0.12);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -190,6 +194,26 @@
     .result-card.old-card { background: var(--old-dim); border-color: rgba(245,158,11,0.3); }
     .result-card.new-card { background: var(--new-dim); border-color: rgba(52,211,153,0.3); }
     .result-card.solar-card { background: var(--solar-dim); border-color: rgba(250,204,21,0.3); }
+    .result-card.tou-card      { background: var(--tou-dim);       border-color: rgba(167,139,250,0.3); }
+    .result-card.tou-after-card{ background: var(--tou-after-dim);  border-color: rgba(45,212,191,0.3); }
+    .tou-card .rc-label        { color: var(--tou); }
+    .tou-card .rc-total        { color: var(--tou); }
+    .tou-after-card .rc-label  { color: var(--tou-after); }
+    .tou-after-card .rc-total  { color: var(--tou-after); }
+    .be-stat.tou-card          { background: var(--tou-dim);       border-color: rgba(167,139,250,0.3); }
+    .be-stat.tou-after-card    { background: var(--tou-after-dim); border-color: rgba(45,212,191,0.3); }
+    .be-stat .be-val-tou       { font-size: 1.5rem; font-weight: 800; color: var(--tou); }
+    .be-stat .be-val-tou-after { font-size: 1.5rem; font-weight: 800; color: var(--tou-after); }
+
+    /* TOU section dividers */
+    .tou-phase-header {
+      display: flex; align-items: center; gap: 0.6rem;
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; margin: 0.75rem 0 0.6rem;
+    }
+    .tou-phase-header .ph-line {
+      flex: 1; height: 1px;
+    }
     .result-card .rc-label {
       font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.6rem;
     }
@@ -406,6 +430,20 @@
           <div>
             <div class="mode-title">2. Hybrid ครอบคลุม Peak (09:00–22:00) สำหรับ TOU</div>
             <div class="mode-desc">Solar + Battery สำรองช่วง 18:00–22:00 ครอบคลุม Peak TOU Tariff ลดค่าไฟช่วงราคาแพง</div>
+            <div class="mode-desc" style="margin-top:0.5rem; display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap;">
+              <span class="inline-unit old-unit">On-peak (09:00–22:00)</span>
+              <div class="inline-input-wrap">
+                <input type="number" id="tou-onPeakRate" value="5.79" step="0.0001" min="0" class="inline-input old-inline" onclick="event.stopPropagation()" />
+                <span class="inline-unit old-unit">฿</span>
+              </div>
+            </div>
+            <div class="mode-desc" style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap;">
+              <span class="inline-unit">Off-peak (22:00–09:00)</span>
+              <div class="inline-input-wrap">
+                <input type="number" id="tou-offPeakRate" value="2.64" step="0.0001" min="0" class="inline-input new-inline" onclick="event.stopPropagation()" />
+                <span class="inline-unit">฿</span>
+              </div>
+            </div>
           </div>
         </div>
         <div class="mode-btn" id="mode-btn-3" onclick="selectMode(3)">
@@ -425,14 +463,14 @@
         <div class="field">
           <label><strong>ขนาด Solar Panel</strong></label>
           <div class="input-wrap">
-            <input type="number" id="solar-kw" step="0.1" min="0" value="0" />
+            <input type="number" id="solar-kw" step="0.01" min="0" value="0" />
             <span class="unit">kW</span>
           </div>
         </div>
         <div class="field">
           <label><strong>ขนาด Battery</strong> (0 = ไม่มี)</label>
           <div class="input-wrap">
-            <input type="number" id="battery-kwh" step="0.1" min="0" value="0" />
+            <input type="number" id="battery-kwh" step="0.01" min="0" value="0" />
             <span class="unit">kWh</span>
           </div>
         </div>
@@ -585,6 +623,114 @@
           <div class="spec-note" id="be-note" style="margin-top:0.75rem;">—</div>
         </div>
 
+        <!-- TOU Results (แสดงเมื่อเลือก Mode 2) -->
+        <div id="tou-results" style="display:none;">
+          <hr style="border-color:var(--border); margin:1rem 0;" />
+          <div class="card-title" style="color:var(--tou); margin-bottom:0.5rem;">⚡ เปรียบเทียบกรณีเปลี่ยนมิเตอร์เป็น TOU</div>
+
+          <!-- ── ก่อน Solar ── -->
+          <div class="tou-phase-header" style="color:var(--tou);">
+            <span>☁️ ก่อนติด Solar</span>
+            <div class="ph-line" style="background:rgba(167,139,250,0.3);"></div>
+          </div>
+
+          <div class="result-grid">
+            <div class="result-card tou-card">
+              <div class="rc-label">On-peak (09:00–22:00)</div>
+              <div class="rc-total" id="tou-on-cost">—</div>
+              <div class="rc-unit"><span id="tou-on-units-label">—</span> หน่วย × <span id="tou-on-rate-label">—</span> ฿</div>
+            </div>
+            <div class="result-card tou-card">
+              <div class="rc-label">Off-peak (22:00–09:00)</div>
+              <div class="rc-total" id="tou-off-cost">—</div>
+              <div class="rc-unit"><span id="tou-off-units-label">—</span> หน่วย × <span id="tou-off-rate-label">—</span> ฿</div>
+            </div>
+          </div>
+          <div class="result-grid" style="margin-top:0;">
+            <div class="result-card tou-card" style="grid-column:1/-1;">
+              <div class="rc-label">รวม TOU ทั้งหมด (รวม Ft + ค่าบริการ + VAT)</div>
+              <div class="rc-total" id="tou-total-vat">—</div>
+              <div class="rc-unit">บาท / เดือน</div>
+            </div>
+          </div>
+
+          <!-- TOU vs อัตราปัจจุบัน (ไม่มี Solar) -->
+          <div class="diff-card" style="margin-bottom:0.75rem;">
+            <div class="diff-header">
+              <span class="diff-title">TOU (ไม่มี Solar) vs อัตราปัจจุบัน</span>
+              <span class="diff-amount" id="tou-diff-amount">—</span>
+            </div>
+            <div class="diff-bar-wrap"><div class="diff-bar" id="tou-diff-bar" style="width:0%"></div></div>
+            <div class="diff-note" id="tou-diff-note">—</div>
+          </div>
+
+          <!-- ── หลัง Solar ── -->
+          <div class="tou-phase-header" style="color:var(--tou-after);">
+            <span>☀️ หลังติด Solar (Mode 2)</span>
+            <div class="ph-line" style="background:rgba(45,212,191,0.3);"></div>
+          </div>
+
+          <div class="result-grid">
+            <div class="result-card tou-after-card">
+              <div class="rc-label">On-peak ที่เหลือ</div>
+              <div class="rc-total" id="tou-on-after-units">—</div>
+              <div class="rc-unit">หน่วย (ลดลง <span id="tou-on-reduced">—</span> หน่วย)</div>
+            </div>
+            <div class="result-card tou-after-card">
+              <div class="rc-label">Off-peak ที่เหลือ</div>
+              <div class="rc-total" id="tou-off-after-units">—</div>
+              <div class="rc-unit">หน่วย (ลดลง <span id="tou-off-reduced">—</span> หน่วย)</div>
+            </div>
+          </div>
+          <div class="result-grid" style="margin-top:0;">
+            <div class="result-card tou-after-card">
+              <div class="rc-label">รวม TOU + Solar (รวม VAT)</div>
+              <div class="rc-total" id="tou-after-solar-vat">—</div>
+              <div class="rc-unit">บาท / เดือน</div>
+            </div>
+            <div class="result-card tou-after-card">
+              <div class="rc-label">ประหยัดจาก Solar (เทียบ TOU)</div>
+              <div class="rc-total" id="tou-solar-saving">—</div>
+              <div class="rc-unit">บาท / เดือน</div>
+            </div>
+          </div>
+
+          <!-- TOU + Solar vs อัตราใหม่ (มิ.ย.69) -->
+          <div class="diff-card" style="margin-bottom:0.75rem; border-color:rgba(45,212,191,0.3);">
+            <div class="diff-header">
+              <span class="diff-title">TOU + Solar vs อัตราใหม่ (มิ.ย.69)</span>
+              <span class="diff-amount" id="tou-solar-diff-amount">—</span>
+            </div>
+            <div class="diff-bar-wrap"><div class="diff-bar" id="tou-solar-diff-bar" style="width:0%"></div></div>
+            <div class="diff-note" id="tou-solar-diff-note">—</div>
+          </div>
+
+          <!-- TOU Breakeven -->
+          <div id="tou-breakeven-section" style="display:none;">
+            <hr style="border-color:var(--border); margin:1rem 0;" />
+            <div class="card-title" style="color:var(--tou-after); margin-bottom:0.75rem;">📈 จุดคุ้มทุน TOU + Solar (เทียบอัตราปัจจุบัน)</div>
+            <div class="breakeven-grid">
+              <div class="be-stat tou-after-card">
+                <div class="be-val-tou-after" id="tou-be-months">—</div>
+                <div class="be-label">เดือน</div>
+              </div>
+              <div class="be-stat tou-after-card">
+                <div class="be-val-tou-after" id="tou-be-years">—</div>
+                <div class="be-label">ปี</div>
+              </div>
+              <div class="be-stat tou-after-card">
+                <div class="be-val-tou-after" id="tou-be-life-saving">—</div>
+                <div class="be-label">บาท ประหยัดตลอดอายุระบบ</div>
+              </div>
+              <div class="be-stat tou-after-card">
+                <div class="be-val-tou-after" id="tou-be-roi">—</div>
+                <div class="be-label">% ROI ตลอดอายุระบบ</div>
+              </div>
+            </div>
+            <div class="spec-note" id="tou-be-note" style="margin-top:0.75rem; border-left-color:var(--tou-after);">—</div>
+          </div>
+        </div><!-- /tou-results -->
+
       </div>
     </div><!-- /solar-results -->
 
@@ -733,6 +879,35 @@
   }
 
   // ════════════════════════════════════════════════════
+  // คำนวณค่าไฟ: TOU (ไม่มีขั้นบันได — คิดตามช่วงเวลา)
+  // On-peak  : 09:00–22:00 (13 ชม.)
+  // Off-peak : 22:00–09:00 (11 ชม.)
+  //
+  // แมปจาก slider:
+  //   Day (06:00–18:00) = dayUnits
+  //     → 06:00–09:00 (3 ชม.) = off-peak  = dayUnits × 3/12
+  //     → 09:00–18:00 (9 ชม.) = on-peak   = dayUnits × 9/12
+  //   Night (18:00–06:00) = nightUnits
+  //     → 18:00–22:00 (4 ชม.) = on-peak   = nightUnits × 4/12
+  //     → 22:00–06:00 (8 ชม.) = off-peak  = nightUnits × 8/12
+  // ════════════════════════════════════════════════════
+  function calcTOU(dayUnits, nightUnits, ft, serviceCharge) {
+    const onPeakRate  = parseFloat(document.getElementById('tou-onPeakRate').value)  || 5.79;
+    const offPeakRate = parseFloat(document.getElementById('tou-offPeakRate').value) || 2.64;
+
+    const onPeakUnits  = dayUnits * (9 / 12) + nightUnits * (4 / 12);
+    const offPeakUnits = dayUnits * (3 / 12) + nightUnits * (8 / 12);
+    const totalUnits   = dayUnits + nightUnits;
+
+    const onPeakCost  = onPeakUnits  * onPeakRate;
+    const offPeakCost = offPeakUnits * offPeakRate;
+    const ftCost      = totalUnits   * ft;
+    const total       = onPeakCost + offPeakCost + ftCost + serviceCharge;
+
+    return { total, onPeakUnits, offPeakUnits, onPeakCost, offPeakCost, onPeakRate, offPeakRate };
+  }
+
+  // ════════════════════════════════════════════════════
   // คำนวณบิลทั้งหมด (ก่อน VAT)
   // ════════════════════════════════════════════════════
   function calcBill(units, ft, serviceCharge, calcFn) {
@@ -769,7 +944,7 @@
   // ════════════════════════════════════════════════════
   // แสดงส่วนต่าง (diff bar)
   // ════════════════════════════════════════════════════
-  function renderDiff(diff, oldBase, labelEl, barEl, noteEl) {
+  function renderDiff(diff, oldBase, labelEl, barEl, noteEl, subject = 'โครงสร้างใหม่') {
     document.getElementById(labelEl).className = 'diff-amount';
     const dEl = document.getElementById(labelEl);
     const bEl = document.getElementById(barEl);
@@ -777,16 +952,16 @@
     dEl.className = 'diff-amount';
     if (Math.abs(diff) < 0.01) {
       dEl.textContent = '0.00 บาท'; dEl.classList.add('same');
-      nEl.innerHTML   = 'ค่าไฟฟ้า <strong>เท่ากัน</strong> ทั้งสองโครงสร้าง (รวม VAT)';
+      nEl.innerHTML   = `${subject} <strong>เท่ากัน</strong> (รวม VAT)`;
       bEl.className   = 'diff-bar same'; bEl.style.width = '0%';
     } else if (diff < 0) {
       const s = Math.abs(diff);
       dEl.textContent = `ประหยัด ${s.toFixed(2)} บาท`; dEl.classList.add('cheaper');
-      nEl.innerHTML   = `โครงสร้างใหม่ <strong>ถูกกว่า</strong> ประหยัด <strong>${s.toFixed(2)} บาท/เดือน</strong> (รวม VAT)`;
+      nEl.innerHTML   = `${subject} <strong>ถูกกว่า</strong> ประหยัด <strong>${s.toFixed(2)} บาท/เดือน</strong> (รวม VAT)`;
       bEl.className   = 'diff-bar cheaper'; bEl.style.width = Math.min((s / oldBase) * 100, 100).toFixed(1) + '%';
     } else {
       dEl.textContent = `แพงขึ้น ${diff.toFixed(2)} บาท`; dEl.classList.add('pricier');
-      nEl.innerHTML   = `โครงสร้างใหม่ <strong>แพงกว่า</strong> เพิ่มขึ้น <strong>${diff.toFixed(2)} บาท/เดือน</strong> (รวม VAT)`;
+      nEl.innerHTML   = `${subject} <strong>แพงกว่า</strong> เพิ่มขึ้น <strong>${diff.toFixed(2)} บาท/เดือน</strong> (รวม VAT)`;
       bEl.className   = 'diff-bar pricier'; bEl.style.width = Math.min((diff / oldBase) * 100, 100).toFixed(1) + '%';
     }
   }
@@ -831,20 +1006,37 @@
       const eveningUnits = nightUnits * (4 / 12);  // 18:00–22:00
 
       // หน่วยที่ Solar ผลิตได้ (จาก kW ที่ผู้ใช้กำหนด)
-      const solarKw       = parseFloat(document.getElementById('solar-kw').value) || 0;
-      const solarProduced = solarKw * KWH_PER_KW_MONTH;
+      const solarKw          = parseFloat(document.getElementById('solar-kw').value)    || 0;
+      const batteryKwhPerDay = parseFloat(document.getElementById('battery-kwh').value) || 0;
+      const batteryKwhPerMonth = batteryKwhPerDay * DAYS_PER_MONTH;
+      const solarProduced    = solarKw * KWH_PER_KW_MONTH;
 
-      // หน่วยที่ลดออกจากบิล ตาม mode
-      let solarSaved = 0;
+      // หน่วยที่ลดออกจากบิล ตาม mode + ขนาด battery จริง
+      let solarSaved   = 0;
+      let solarCoverDay = 0;   // ส่วนที่ cover กลางวัน
+      let batteryCovers = 0;   // ส่วนที่ battery cover กลางคืน/เย็น
+
       if (solarMode === 1) {
-        // กลางวันอย่างเดียว
+        // กลางวันอย่างเดียว ไม่มี Battery
         solarSaved = Math.min(solarProduced, dayUnits);
+
       } else if (solarMode === 2) {
-        // Peak 09:00–22:00 = กลางวัน + เย็น
-        solarSaved = Math.min(solarProduced, dayUnits + eveningUnits);
+        // Solar cover กลางวันก่อน
+        solarCoverDay  = Math.min(solarProduced, dayUnits);
+        // Solar ที่เหลือชาร์จ Battery
+        const excessSolar = solarProduced - solarCoverDay;
+        // Battery cover ช่วงเย็น 18:00–22:00
+        // จำกัดด้วย: (1) excess solar ที่ชาร์จได้, (2) ขนาด battery, (3) ความต้องการจริง
+        batteryCovers  = Math.min(excessSolar, batteryKwhPerMonth, eveningUnits);
+        solarSaved     = solarCoverDay + batteryCovers;
+
       } else if (solarMode === 3) {
-        // ทั้งวัน
-        solarSaved = Math.min(solarProduced, units);
+        // Solar cover กลางวันก่อน
+        solarCoverDay  = Math.min(solarProduced, dayUnits);
+        const excessSolar = solarProduced - solarCoverDay;
+        // Battery cover กลางคืนทั้งหมด
+        batteryCovers  = Math.min(excessSolar, batteryKwhPerMonth, nightUnits);
+        solarSaved     = solarCoverDay + batteryCovers;
       }
 
       // คำนวณบิลหลังติด Solar (ซื้อไฟน้อยลง)
@@ -895,6 +1087,82 @@
       }
 
       document.getElementById('solar-results').style.display = 'block';
+
+      // ── TOU (เฉพาะ Mode 2) ──
+      if (solarMode === 2) {
+        const onPeakRate  = parseFloat(document.getElementById('tou-onPeakRate').value)  || 5.79;
+        const offPeakRate = parseFloat(document.getElementById('tou-offPeakRate').value) || 2.64;
+
+        // TOU โดยไม่มี Solar
+        const touFull    = calcTOU(dayUnits, nightUnits, ft, serviceCharge);
+        const touFullVat = touFull.total * vatRate;
+
+        // TOU หลังติด Solar
+        // Solar ลด on-peak ก่อน (แพงกว่า) แล้วค่อยลด off-peak ถ้าเหลือ
+        const onPeakAfter   = Math.max(0, touFull.onPeakUnits  - solarSaved);
+        const onPeakReduced = touFull.onPeakUnits - onPeakAfter;
+        const extraSolar    = Math.max(0, solarSaved - touFull.onPeakUnits);
+        const offPeakAfter  = Math.max(0, touFull.offPeakUnits - extraSolar);
+        const offPeakReduced = touFull.offPeakUnits - offPeakAfter;
+        const totalAfter    = onPeakAfter + offPeakAfter;
+        const touAfterCost  = onPeakAfter * touFull.onPeakRate + offPeakAfter * touFull.offPeakRate
+                            + totalAfter * ft + serviceCharge;
+        const touAfterVat   = touAfterCost * vatRate;
+
+        const touSolarSaving = touFullVat - touAfterVat;          // ประหยัดจาก Solar
+        const touVsOldSaving = oldWithVat  - touAfterVat;         // ประหยัดรวมเทียบอัตราปัจจุบัน
+
+        // ── แสดงผล "ก่อน Solar" ──
+        document.getElementById('tou-on-units-label').textContent  = touFull.onPeakUnits.toFixed(1);
+        document.getElementById('tou-off-units-label').textContent = touFull.offPeakUnits.toFixed(1);
+        document.getElementById('tou-on-rate-label').textContent   = touFull.onPeakRate.toFixed(4);
+        document.getElementById('tou-off-rate-label').textContent  = touFull.offPeakRate.toFixed(4);
+        document.getElementById('tou-on-cost').textContent         = touFull.onPeakCost.toFixed(2);
+        document.getElementById('tou-off-cost').textContent        = touFull.offPeakCost.toFixed(2);
+        document.getElementById('tou-total-vat').textContent       = touFullVat.toFixed(2);
+
+        // ── แสดงผล "หลัง Solar" ──
+        document.getElementById('tou-on-after-units').textContent  = onPeakAfter.toFixed(1);
+        document.getElementById('tou-on-reduced').textContent      = onPeakReduced.toFixed(1);
+        document.getElementById('tou-off-after-units').textContent = offPeakAfter.toFixed(1);
+        document.getElementById('tou-off-reduced').textContent     = offPeakReduced.toFixed(1);
+        document.getElementById('tou-after-solar-vat').textContent = touAfterVat.toFixed(2);
+        document.getElementById('tou-solar-saving').textContent    = touSolarSaving.toFixed(2);
+
+        // ── Diff bars ──
+        // (1) TOU ไม่มี Solar vs อัตราปัจจุบัน
+        const touDiff = touFullVat - oldWithVat;
+        renderDiff(touDiff, oldWithVat, 'tou-diff-amount', 'tou-diff-bar', 'tou-diff-note', 'TOU (ไม่มี Solar)');
+        // (2) TOU + Solar vs อัตราใหม่ (มิ.ย.69)
+        const touSolarVsNew = touAfterVat - newWithVat;
+        renderDiff(touSolarVsNew, newWithVat, 'tou-solar-diff-amount', 'tou-solar-diff-bar', 'tou-solar-diff-note', 'TOU + Solar');
+
+        // ── TOU Breakeven ──
+        const touBeSec = document.getElementById('tou-breakeven-section');
+        if (investment > 0 && touVsOldSaving > 0) {
+          const touBeMonths   = investment / touVsOldSaving;
+          const touLifeMonths = systemLife * 12;
+          const touLifeSaving = touVsOldSaving * touLifeMonths;
+          const touRoi        = ((touLifeSaving - investment) / investment) * 100;
+
+          document.getElementById('tou-be-months').textContent      = touBeMonths.toFixed(1);
+          document.getElementById('tou-be-years').textContent       = (touBeMonths / 12).toFixed(1);
+          document.getElementById('tou-be-life-saving').textContent = (touLifeSaving / 1000).toFixed(1) + 'k';
+          document.getElementById('tou-be-roi').textContent         = touRoi.toFixed(0) + '%';
+
+          const touYears = touBeMonths / 12;
+          document.getElementById('tou-be-note').textContent = touYears > systemLife
+            ? `⚠️ จุดคุ้มทุน ${touYears.toFixed(1)} ปี นานกว่าอายุระบบ ${systemLife} ปี`
+            : `✅ คุ้มทุนภายใน ${touYears.toFixed(1)} ปี เหลืออีก ${(systemLife - touYears).toFixed(1)} ปีที่ประหยัดได้ฟรี`;
+          touBeSec.style.display = 'block';
+        } else {
+          touBeSec.style.display = 'none';
+        }
+
+        document.getElementById('tou-results').style.display = 'block';
+      } else {
+        document.getElementById('tou-results').style.display = 'none';
+      }
     } else {
       document.getElementById('solar-results').style.display = 'none';
     }
@@ -910,6 +1178,15 @@
   document.getElementById('units').addEventListener('input', () => {
     if (solarEnabled) updateSolarSpecs();
   });
+
+  // เมื่อแก้ Solar kW หรือ Battery kWh ให้คำนวณผลใหม่ทันที (ถ้าผลลัพธ์แสดงอยู่แล้ว)
+  function recalcIfResultsVisible() {
+    if (solarEnabled && document.getElementById('results').style.display !== 'none') {
+      calculate();
+    }
+  }
+  document.getElementById('solar-kw').addEventListener('input', recalcIfResultsVisible);
+  document.getElementById('battery-kwh').addEventListener('input', recalcIfResultsVisible);
 </script>
 </body>
 </html>
